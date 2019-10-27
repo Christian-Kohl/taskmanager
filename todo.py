@@ -12,7 +12,9 @@ def setup():
     c.execute('''CREATE TABLE tasks
              (id INTEGER NOT NULL PRIMARY KEY,
              date datetime,
-             task text NOT NULL);
+             task text NOT NULL,
+             habit BIT NOT NULL,
+             increment INTEGER);
              ''')
     conn.commit()
     conn.close()
@@ -21,8 +23,8 @@ def setup():
 def add_db(task):
     conn = sqlite3.connect("todolist.db")
     c = conn.cursor()
-    c.execute('''INSERT INTO tasks(date, task) VALUES(?, ?)
-             ''', (task.date, task.name))
+    c.execute('''INSERT INTO tasks(date, task, habit, increment) VALUES(?, ?, ?, ?)
+             ''', (task.date, task.name, task.habit, task.increment))
     conn.commit()
     conn.close()
 
@@ -44,10 +46,19 @@ def todo():
 @click.command()
 @click.option('--date', prompt="Date for todo task")
 @click.option('--todo', prompt="What is your task?")
-def add(date, todo):
+@click.option('--habit', is_flag=True)
+def add(date, todo, habit):
     date = dateparser.parse(date)
     task = Task(date, todo)
-    add_db(task)
+    if habit:
+        increment = click.prompt("How often do you want to do your habit?")
+        task.habit = 1
+        task.increment = increment
+        add_db(task)
+    else:
+        task.habit = 0
+        task.increment = None
+        add_db(task)
 
 
 @click.command()
