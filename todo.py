@@ -83,10 +83,23 @@ def remove(todo):
 
 
 @click.command()
-def get():
-    conn = sqlite3.connect("todolist.db")
-    print(pd.read_sql('''SELECT * FROM tasks''', con=conn, index_col="id"))
 
+
+@click.option('--day', 'period', flag_value='day')
+@click.option('--week', 'period', flag_value='week')
+@click.option('--month', 'period', flag_value='month')
+@click.argument('date', required=False)
+def get(period, date):
+    conn = sqlite3.connect("todolist.db")
+    if not date:
+        print(pd.read_sql('''SELECT * FROM tasks''', con=conn, index_col="id"))
+    else:
+        if period == 'day':
+            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+1 days')", params=[date, date], con=conn, index_col="id"))
+        elif period == 'month':
+            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+31 days')", params=[date, date], con=conn, index_col="id"))
+        else:
+            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+7 days')", params=[date, date], con=conn, index_col="id"))
 
 @click.command()
 @click.option('--name', prompt="What is your project name?")
