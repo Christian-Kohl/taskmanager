@@ -26,6 +26,9 @@ def setup():
                 date datetime,
                 project_name text NOT NULL)
             ''')
+    c.execute('''CREATE TABLE tracker
+                (date datetime PRIMARY KEY,
+                count INTEGER);''')
     c.execute('''
                 INSERT INTO projects (project_name) VALUES(?)
             ''', ('General', ))
@@ -49,6 +52,36 @@ def remove_db(task):
              ''', (task, ))
     conn.commit()
     conn.close()
+
+def increment_count():
+    check_current_count()
+    conn = sqlite3.connect("todolist.db")
+    c = conn.cursor()
+    c.execute('''UPDATE tracker SET count = count + 1
+                where date = date('now')
+             ''')
+    conn.commit()
+    conn.close()
+
+def decrement_count():
+    check_current_count()
+    conn = sqlite3.connect("todolist.db")
+    c = conn.cursor()
+    c.execute('''UPDATE tracker SET count = count - 1
+                where date = date('now')
+             ''')
+    conn.commit()
+    conn.close()
+
+def check_current_count():
+    conn = sqlite3.connect("todolist.db")
+    pron = pd.read_sql("SELECT * FROM tracker where date = date('now')", conn)
+    if pron.empty:
+        c = conn.cursor()
+        c.execute('''INSERT INTO tracker VALUES(date('now'), 0)
+                 ''')
+        conn.commit()
+        conn.close()
 
 
 @click.group()
@@ -83,8 +116,6 @@ def remove(todo):
 
 
 @click.command()
-
-
 @click.option('--day', 'period', flag_value='day')
 @click.option('--week', 'period', flag_value='week')
 @click.option('--month', 'period', flag_value='month')
@@ -100,6 +131,9 @@ def get(period, date):
             print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+31 days')", params=[date, date], con=conn, index_col="id"))
         else:
             print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+7 days')", params=[date, date], con=conn, index_col="id"))
+
+
+
 
 @click.command()
 @click.option('--name', prompt="What is your project name?")
@@ -130,10 +164,15 @@ def get_proj():
 
 
 @click.command()
-@click.option('--task', prompt='What tassk did you complete?')
+@click.option('--task', prompt='What task did you complete?')
 def complete(task):
     conn = sqlite3.connect("todolist.db")
     c = conn.cursor()
+    completed = c.execute('''SELECT completed FROM tasks where task = ?''', (task, )).fetchall()[0][0]
+    if completed:
+        increment_count()
+    else:
+        decrement_count()
     c.execute('''
         UPDATE tasks
         SET completed = 1 - completed
