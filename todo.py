@@ -16,6 +16,7 @@ def setup():
              project_name text NOT NULL,
              habit BIT NOT NULL,
              increment INTEGER,
+             completed BIT NOT NULL,
              FOREIGN KEY (project_name) references projects(project_name)
              );
              ''')
@@ -35,8 +36,8 @@ def setup():
 def add_db(task):
     conn = sqlite3.connect("todolist.db")
     c = conn.cursor()
-    c.execute('''INSERT INTO tasks(date, task, project_name, habit, increment) VALUES(?, ?, ?, ?, ?)
-             ''', (task.date, task.name, task.proj, task.habit, task.increment))
+    c.execute('''INSERT INTO tasks(date, task, project_name, habit, increment, completed) VALUES(?, ?, ?, ?, ?, ?)
+             ''', (task.date, task.name, task.proj, task.habit, task.increment, False))
     conn.commit()
     conn.close()
 
@@ -82,10 +83,23 @@ def remove(todo):
 
 
 @click.command()
-def get():
-    conn = sqlite3.connect("todolist.db")
-    print(pd.read_sql('''SELECT * FROM tasks''', con=conn, index_col="id"))
 
+
+@click.option('--day', 'period', flag_value='day')
+@click.option('--week', 'period', flag_value='week')
+@click.option('--month', 'period', flag_value='month')
+@click.argument('date', required=False)
+def get(period, date):
+    conn = sqlite3.connect("todolist.db")
+    if not date:
+        print(pd.read_sql('''SELECT * FROM tasks''', con=conn, index_col="id"))
+    else:
+        if period == 'day':
+            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+1 days')", params=[date, date], con=conn, index_col="id"))
+        elif period == 'month':
+            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+31 days')", params=[date, date], con=conn, index_col="id"))
+        else:
+            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+7 days')", params=[date, date], con=conn, index_col="id"))
 
 @click.command()
 @click.option('--name', prompt="What is your project name?")
@@ -115,12 +129,39 @@ def get_proj():
     print(pd.read_sql('''SELECT * FROM projects''', con=conn, index_col="id"))
 
 
+@click.command()
+@click.option('--task', prompt='What tassk did you complete?')
+def complete(task):
+    conn = sqlite3.connect("todolist.db")
+    c = conn.cursor()
+    c.execute('''
+        UPDATE tasks
+        SET completed = 1 - completed
+        WHERE task = ?;
+    ''', (task, ))
+    conn.commit()
+    conn.close()
+
+
+@click.command()
+def clear():
+    conn = sqlite3.connect("todolist.db")
+    c = conn.cursor()
+    c.execute('''
+        DELETE FROM tasks WHERE completed = 1;
+    ''')
+    conn.commit()
+    conn.close()
+
+
 todo.add_command(add)
 todo.add_command(remove)
 todo.add_command(add_proj)
 todo.add_command(remove_proj)
 todo.add_command(get)
 todo.add_command(get_proj)
+todo.add_command(complete)
+todo.add_command(clear)
 
 
 if __name__ == '__main__':
