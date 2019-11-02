@@ -53,6 +53,7 @@ def remove_db(task):
     conn.commit()
     conn.close()
 
+
 def increment_count():
     check_current_count()
     conn = sqlite3.connect("todolist.db")
@@ -63,6 +64,7 @@ def increment_count():
     conn.commit()
     conn.close()
 
+
 def decrement_count():
     check_current_count()
     conn = sqlite3.connect("todolist.db")
@@ -72,6 +74,7 @@ def decrement_count():
              ''')
     conn.commit()
     conn.close()
+
 
 def check_current_count():
     conn = sqlite3.connect("todolist.db")
@@ -126,13 +129,32 @@ def get(period, date):
         print(pd.read_sql('''SELECT * FROM tasks''', con=conn, index_col="id"))
     else:
         if period == 'day':
-            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+1 days')", params=[date, date], con=conn, index_col="id"))
+            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+1 days')",
+                              params=[date, date], con=conn, index_col="id"))
         elif period == 'month':
-            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+31 days')", params=[date, date], con=conn, index_col="id"))
+            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+31 days')",
+                              params=[date, date], con=conn, index_col="id"))
         else:
-            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+7 days')", params=[date, date], con=conn, index_col="id"))
+            print(pd.read_sql("SELECT * FROM tasks where date >= date(?) and date < date(?, '+7 days')",
+                              params=[date, date], con=conn, index_col="id"))
 
 
+@click.command()
+def get_rec():
+    conn = sqlite3.connect("todolist.db")
+    rec_list = pd.read_sql("SELECT * FROM tasks where date >= date('now') and date < date('now', '+1 days') and completed = 0",
+                           con=conn, index_col="id")
+    if len(rec_list) >= 10:
+        print(rec_list)
+    else:
+        rec_list_2 = pd.read_sql("SELECT * FROM tasks where date >= date('now', '+1 days') and date < date('now', '+2 days') and completed = 0 LIMIT ?;",
+                                 params=[10 - len(rec_list)], con=conn, index_col="id")
+        if len(rec_list_2) == 10 - len(rec_list):
+            print(rec_list, rec_list_2)
+        else:
+            rec_list_3 = pd.read_sql("SELECT * FROM tasks where date >= date('now', '+2 days') or date is null LIMIT ?;",
+                                     params=[10 - len(rec_list) - len(rec_list_2)], con=conn, index_col="id")
+            print(pd.concat([rec_list, rec_list_2, rec_list_3]))
 
 
 @click.command()
@@ -168,7 +190,8 @@ def get_proj():
 def complete(task):
     conn = sqlite3.connect("todolist.db")
     c = conn.cursor()
-    completed = c.execute('''SELECT completed FROM tasks where task = ?''', (task, )).fetchall()[0][0]
+    completed = c.execute(
+        '''SELECT completed FROM tasks where task = ?''', (task, )).fetchall()[0][0]
     if completed:
         increment_count()
     else:
@@ -201,6 +224,7 @@ todo.add_command(get)
 todo.add_command(get_proj)
 todo.add_command(complete)
 todo.add_command(clear)
+todo.add_command(get_rec)
 
 
 if __name__ == '__main__':
