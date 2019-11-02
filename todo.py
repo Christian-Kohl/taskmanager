@@ -93,10 +93,10 @@ def todo():
 
 
 @click.command()
-@click.option('--date', prompt="Date for todo task")
-@click.option('--todo', prompt="What is your task?")
-@click.option('--project', default='General')
-@click.option('--habit', is_flag=True)
+@click.option('--date', prompt="Date for todo task", help='Date when task is due, can be in words, ie tomorrow')
+@click.option('--todo', prompt="What is your task?", help='Task to be completed')
+@click.option('--project', default='General', help='Project task belongs to, default is general')
+@click.option('--habit', is_flag=True, help='Is this a habit?')
 def add(date, todo, project, habit):
     date = dateparser.parse(date)
     task = Task(date, todo)
@@ -113,15 +113,15 @@ def add(date, todo, project, habit):
 
 
 @click.command()
-@click.option('--todo', prompt='Which task do you want to remove?')
+@click.option('--todo', prompt='Which task do you want to remove?', help='Task to be removed')
 def remove(todo):
     remove_db(todo)
 
 
 @click.command()
-@click.option('--day', 'period', flag_value='day')
-@click.option('--week', 'period', flag_value='week')
-@click.option('--month', 'period', flag_value='month')
+@click.option('--day', 'period', flag_value='day', help='tasks for the day')
+@click.option('--week', 'period', flag_value='week', help='tasks for the week')
+@click.option('--month', 'period', flag_value='month', help='tasks for the month')
 @click.argument('date', required=False)
 def get(period, date):
     conn = sqlite3.connect("todolist.db")
@@ -158,8 +158,8 @@ def get_rec():
 
 
 @click.command()
-@click.option('--name', prompt="What is your project name?")
-@click.option('--date', default=None)
+@click.option('--name', prompt="What is your project name?", help='name of the project')
+@click.option('--date', default=None, help='date when project is due')
 def add_proj(name, date):
     conn = sqlite3.connect("todolist.db")
     c = conn.cursor()
@@ -186,7 +186,7 @@ def get_proj():
 
 
 @click.command()
-@click.option('--task', prompt='What task did you complete?')
+@click.option('--task', prompt='What task did you complete?', help='task that is completed')
 def complete(task):
     conn = sqlite3.connect("todolist.db")
     c = conn.cursor()
